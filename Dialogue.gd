@@ -1,30 +1,60 @@
 class_name Dialogue
 extends Reference
 
+# Holds all the lines of dialogue as an array of arrays.
+# Each inner array is the line data for a given line.
+# Line data looks like ["Line of dialogue", finish_conversation_bool]
+# If choices are appended to the line, it will add two values per choice:
+# ["Line text", finish, "Choice 1 text", "Choice 1 target label", "Choice 2 text", "Choice 2 target label"]
 var line_tree:Array
+
+# Holds all the labels.
+# key=label_name:String, value=line_index:int
 var label_list:Dictionary
+# Stores all the lines where conditional jumps should run, their functions, and their target labels.
+# key=line_index, value=Array[function:FuncRef, target_label_if_true:String, target_label_if_false:String]
 var conditional_jump_list:Dictionary
+# Stores all the lines where custom functions need to run, and the FuncRefs to them.
+# Each line may have any amount of functions to run.
+# key=line_index, value=Array[function:FuncRef...]
 var functions_to_run_list:Dictionary
+# Holds all the lines where a start label needs to change.
+# key=line_index, value="Target label"
 var start_label_list:Dictionary
+
+# Where to start the next conversation from
 var start_line:int = 0
+# Which line is currently being read. Gets reset by start_conversation.
 var current_line:int = 0
 
 
-# Writer facing functions (for the person writing the dialogue tree)
 
+
+### Writer facing functions (for the person writing the dialogue tree)
+
+# Add a line of dialogue.
+# The Dialogue class doesn't handle the finish_conversation bool,
+# that's for the dialogue renderer or some other state manager to handle.
 func add( line_text:String, finish_conversation:bool = false ) -> void:
 	var new_line:Array = [line_text, finish_conversation]
 	line_tree.append(new_line)
 
+# Add a single choice to the PREVIOUS line of dialogue.
+# The choice and its target label will be appended to the previous line's data.
+# This lets you chain as many choices as you want,
+# adding them to only one line of dialogue.
 func choice( choice_text:String, target_label:String = "" ) -> void:
 	var line_to_append_to = line_tree.size() - 1
 	line_tree[line_to_append_to].append(choice_text)
 	line_tree[line_to_append_to].append(target_label)
 
+# Add a named label to the NEXT line of dialogue.
+# There must be a line of dialogue after it, or the label will be invalid.
 func label( label_name:String ) -> void:
 	assert( !label_list.has(label_name), "Dialogue Error on line "+str(line_tree.size())+": Two or more labels are using the same name ("+label_name+") in the same dialogue tree!" )
 	label_list[label_name] = line_tree.size()
 
+# Conditional jump.
 # Set a given function to be run when advancing to the next line, and
 # jump to specified labels if the function returns true or false.
 # A jump target of "" is interpreted as "advance to the next line as normal."
@@ -32,26 +62,34 @@ func jump_if( expression_func:FuncRef, jump_to_if_true:String, jump_to_if_false:
 	assert( !conditional_jump_list.has( line_tree.size() ), "Dialogue Error on line "+str(line_tree.size())+": Only one conditional jump may exist per line." )
 	conditional_jump_list[line_tree.size()] = [expression_func, jump_to_if_true, jump_to_if_false]
 
+# Custom function.
 # Set a given function to be run when advancing to the next line
+# It's good practice to ensure that the function is defined inside the
+# script that holds the Dialogue instance, if possible. If not, just be careful.
 func run_func( function:FuncRef ) -> void:
 	assert( function.is_valid(), "Dialogue Error on line "+str(line_tree.size())+". Attempted to add invalid function "+str(function) )
 	if !functions_to_run_list.has(line_tree.size()):
 		functions_to_run_list[line_tree.size()] = []
 	functions_to_run_list[line_tree.size()].append(function)
-	
+
+# Sets the given label to be the new starting position for new conversations.
 func set_start_label( label_name:String ) -> void:
 	start_label_list[line_tree.size()] = label_name
 
 
 
-# Non-writer facing functions (internal stuff and data retrieval mostly)
+
+
+### Non-writer facing functions (internal stuff and data retrieval mostly)
+### (Anything prepended with _ is for internal use only.
 
 # Gets the data at the current line, as a reference
 # For internal use only, should not be called by other objects.
 func _get_line_data() -> Array:
-	print("Current line: "+str(current_line))
 	return line_tree[current_line]
 
+# Sets start positions, runs custom functions, and conditional jumps, in that order.
+# After all that is done, it will return line data from whichever line it ends up on.
 # For internal use only, should not be called by other objects.
 func _run_currrent_line() -> Array:
 	
@@ -115,9 +153,12 @@ func advance() -> Array:
 	current_line += 1
 	return _run_currrent_line().duplicate(true)
 
-
+# Validates that the dialogue tree is functional.
+# It crashes if the validation fails, as a broken dialogue tree means a broken game.
+# Put this at the end of whatever you use to load in the dialogue.
 func validate() -> void:
-	# Asserts don't work in release builds, so no point validating
+	# Asserts don't work in released builds, so no point validating there.
+	# This means you REALLY should run validate() from the editor before releasing.
 	if !OS.is_debug_build(): return
 	
 	# Fail if any labels are pointed out of bounds
@@ -147,8 +188,7 @@ func validate() -> void:
 		assert( conditional_jump_list[line_tree.size()-1][1] != ""
 		    and conditional_jump_list[line_tree.size()-1][2] != "",
 			"Dialogue Validation Error: The last line of dialogue has a conditional jump that may advance out of bounds! It must have a target label for both true and false.")
-	
-	
+
 
 
 func start_conversation( at_label:String="" ) -> Array:
@@ -170,17 +210,12 @@ func jump_to_label( label_name:String ) -> Array:
 		current_line = label_list[label_name]
 		return _run_currrent_line().duplicate(true)
 
+
 # Functions useful for save games.
-# Since all other dialogue data is created at runtime and never changes,
-# (with one insignificant exception that the last finish_conversation bool might change)
+# Since all other dialogue data is created at runtime and never really changes,
 # only start_line and current_line need to be saved.
 func serialize() -> Array:
 	return [str(start_line), str(current_line)]
 func deserialize(set_start_line:int, set_current_line:int) -> void:
 	start_line = set_start_line
 	current_line = set_current_line
-
-
-
-func debug_print() -> void:
-	print(line_tree)
