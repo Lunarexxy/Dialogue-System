@@ -1,0 +1,53 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://NPC1.gd" type="Script" id=1]
+[ext_resource path="res://NPC2.gd" type="Script" id=2]
+
+[node name="DialogueSystemTest" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Button_NPC1" type="Button" parent="."]
+margin_left = 298.0
+margin_top = 117.0
+margin_right = 671.0
+margin_bottom = 137.0
+text = "NPC Button (clicking represents interacting with the npc)"
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Button_NPC2" type="Button" parent="."]
+margin_left = 293.0
+margin_top = 245.0
+margin_right = 468.0
+margin_bottom = 265.0
+text = "Conditional Jump NPC"
+script = ExtResource( 2 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="RichTextLabel" type="RichTextLabel" parent="."]
+margin_left = 10.0
+margin_top = 8.0
+margin_right = 321.0
+margin_bottom = 268.0
+text = "Things to test:
+-Conditional jump chains
+-Choice target label validation
+-Choices in general
+
+Things wot work:
+-Custom function calls
+-Chains of custom function calls"
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[connection signal="pressed" from="Button_NPC1" to="Button_NPC1" method="_on_pressed"]
+[connection signal="pressed" from="Button_NPC2" to="Button_NPC2" method="_on_pressed"]
