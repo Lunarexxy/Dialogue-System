@@ -38,13 +38,13 @@ margin_top = 8.0
 margin_right = 321.0
 margin_bottom = 268.0
 text = "Things to test:
--Conditional jump chains
 -Choice target label validation
 -Choices in general
 
 Things wot work:
 -Custom function calls
--Chains of custom function calls"
+-Chains of custom function calls
+-Conditional jump chains"
 __meta__ = {
 "_edit_use_anchors_": false
 }
